@@ -1,6 +1,6 @@
 # Description
 
-**TODO:** add a description of the repo and links to further documentation if needed (eg., a github page)
+MOB-recon + AMRFinderPlus plasmid detection workflow. this can be used to triage shortread assemblies for long-read sequencing
 
 # Table of Contents
 
@@ -13,8 +13,8 @@
 
 **TODO:** add software requirements, for example: 
 
--  R version 4.0.0 or higher
--  Windows, macOS, or Linux operating system
+MOB-suite v3.19- plasmid contig classification, reconstruction and typing
+AMRFinderPlus V4.0.3- amr gene detection
 
 # Installation
 
