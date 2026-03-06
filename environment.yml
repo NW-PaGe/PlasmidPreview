@@ -1,0 +1,11 @@
+name: plasmid
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - pip
+  - pip:
+    - mob-suite
+  - ncbi-amrfinderplus
