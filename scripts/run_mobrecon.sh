@@ -23,7 +23,6 @@ for fasta in ${ASSEMBLIES_DIR}/*.fasta; do
     mob_recon \
         --infile $fasta \
         --outdir ${RESULTS_DIR}/${sample} \
-        --run_typer \
         --num_threads ${THREADS}
 done
 
