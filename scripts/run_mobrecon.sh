@@ -17,6 +17,7 @@ else
     ASSEMBLIES_DIR=${INPUT_PATH}
 fi
 
+for fasta in ${ASSEMBLIES_DIR}/*.fna; do
     sample=$(basename $fasta .fna)
     echo "Processing $sample..."
     mob_recon \
