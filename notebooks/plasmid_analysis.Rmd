@@ -1,0 +1,256 @@
+---
+title: "Plasmid Triage Analysis"
+subtitle: "MOB-suite + AMRFinderPlus Combined Output"
+author: "Shawn Hawken"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo    = TRUE,
+  message = FALSE,
+  warning = FALSE
+)
+```
+
+## Overview
+
+This notebook combines MOB-recon contig classification with AMRFinderPlus resistance
+gene calls, linking them by contig ID to answer questions like:
+
+- Which Inc groups are carrying which resistance genes?
+- Are carbapenemase genes on conjugative plasmids?
+- Which plasmid bins carry multiple resistance genes?
+
+---
+
+## Load Libraries
+
+```{r libraries}
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+```
+
+---
+
+## Load Data
+
+> **Edit the file paths below** to point to your combined output files.
+
+```{r load-data}
+contigs <- read.delim(
+  "combined_contig_report.tsv",
+  sep              = "\t",
+  header           = TRUE,
+  stringsAsFactors = FALSE
+)
+
+amr <- read.delim(
+  "combined_amrfinder.tsv",
+  sep              = "\t",
+  header           = TRUE,
+  stringsAsFactors = FALSE
+)
+```
+
+**Note:** R replaces spaces and special characters in column names with `.` when
+reading tab-delimited files — e.g. `Contig id` becomes `Contig.id` and
+`Gene symbol` becomes `Gene.symbol`.
+
+---
+
+## Filter to Plasmid Contigs
+
+```{r filter-plasmids}
+plasmids <- contigs[contigs$molecule_type == "plasmid", ]
+
+cat("Total contigs:", nrow(contigs), "\n")
+cat("Plasmid contigs:", nrow(plasmids), "\n")
+cat("Samples:", length(unique(plasmids$sample)), "\n")
+```
+
+---
+
+## Join AMR Hits to Plasmid Metadata
+
+```{r join-data}
+plasmid_amr <- merge(
+  plasmids, amr,
+  by.x  = c("sample", "contig_id"),
+  by.y  = c("sample", "Contig.id"),
+  all.x = TRUE
+)
+```
+
+---
+
+## Summary Tables
+
+### Plasmid Bins per Sample
+
+```{r bins-per-sample}
+bins_per_sample <- aggregate(
+  cbind(plasmid_bins = primary_cluster_id) ~ sample,
+  data = plasmids,
+  FUN  = function(x) length(unique(x))
+)
+bins_per_sample$total_contigs <- ave(
+  plasmids$sample, plasmids$sample, FUN = length
+)[match(bins_per_sample$sample, plasmids$sample)]
+bins_per_sample <- bins_per_sample[order(-bins_per_sample$plasmid_bins), ]
+
+kable(bins_per_sample, caption = "Plasmid bins identified per sample", row.names = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+### Total Plasmid Size per Bin
+
+```{r plasmid-size}
+plasmid_sizes <- aggregate(
+  contig_size ~ sample + primary_cluster_id,
+  data = plasmids,
+  FUN  = sum
+)
+names(plasmid_sizes)[names(plasmid_sizes) == "contig_size"] <- "total_size_bp"
+
+plasmid_sizes$n_contigs <- ave(
+  plasmids$contig_size, 
+  paste(plasmids$sample, plasmids$primary_cluster_id),
+  FUN = length
+)[match(
+  paste(plasmid_sizes$sample, plasmid_sizes$primary_cluster_id),
+  paste(plasmids$sample, plasmids$primary_cluster_id)
+)]
+
+plasmid_sizes$rep_type <- tapply(plasmids$rep_type,
+  paste(plasmids$sample, plasmids$primary_cluster_id),
+  FUN = function(x) paste(unique(x[!is.na(x)]), collapse = "; ")
+)[match(
+  paste(plasmid_sizes$sample, plasmid_sizes$primary_cluster_id),
+  names(tapply(plasmids$rep_type, paste(plasmids$sample, plasmids$primary_cluster_id), FUN = function(x) x[1]))
+)]
+
+plasmid_sizes$mobility <- tapply(plasmids$predicted_mobility,
+  paste(plasmids$sample, plasmids$primary_cluster_id),
+  FUN = function(x) paste(unique(x[!is.na(x)]), collapse = "; ")
+)[match(
+  paste(plasmid_sizes$sample, plasmid_sizes$primary_cluster_id),
+  names(tapply(plasmids$predicted_mobility, paste(plasmids$sample, plasmids$primary_cluster_id), FUN = function(x) x[1]))
+)]
+
+plasmid_sizes <- plasmid_sizes[order(plasmid_sizes$sample, -plasmid_sizes$total_size_bp), ]
+
+kable(plasmid_sizes, caption = "Estimated plasmid size per bin (sum of contig lengths)", row.names = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+### Inc Groups by Resistance Class
+
+```{r inc-amr-table}
+amr_with_genes <- plasmid_amr[!is.na(plasmid_amr$Gene.symbol), ]
+inc_amr_long   <- as.data.frame(table(amr_with_genes$rep_type, amr_with_genes$Class))
+names(inc_amr_long) <- c("rep_type", "Class", "n")
+inc_amr <- reshape(inc_amr_long, idvar = "rep_type", timevar = "Class",
+                   direction = "wide")
+names(inc_amr) <- sub("^n\\.", "", names(inc_amr))
+inc_amr[is.na(inc_amr)] <- 0
+
+kable(inc_amr, caption = "Inc group vs. AMR class (count of AMR hits)", row.names = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+---
+
+## Visualizations
+
+### AMR Genes per Resistance Class
+
+```{r amr-class-plot, fig.width=8, fig.height=5}
+amr_with_class <- plasmid_amr[!is.na(plasmid_amr$Class), ]
+amr_counts     <- as.data.frame(table(Class = amr_with_class$Class))
+amr_counts     <- amr_counts[order(-amr_counts$Freq), ]
+
+ggplot(amr_counts, aes(x = reorder(Class, Freq), y = Freq, fill = Class)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  labs(
+    title = "AMR Hits by Resistance Class",
+    x     = "Resistance Class",
+    y     = "Number of Hits"
+  ) +
+  theme_minimal()
+```
+
+### Mobility Class Distribution
+
+```{r mobility-plot, fig.width=6, fig.height=4}
+plasmids_mob    <- plasmids[!is.na(plasmids$predicted_mobility), ]
+mobility_counts <- as.data.frame(table(predicted_mobility = plasmids_mob$predicted_mobility))
+
+ggplot(mobility_counts, aes(x = predicted_mobility, y = Freq, fill = predicted_mobility)) +
+  geom_col(show.legend = FALSE) +
+  labs(
+    title = "Plasmid Mobility Class Distribution",
+    x     = "Mobility",
+    y     = "Number of Contigs"
+  ) +
+  theme_minimal()
+```
+
+### Plasmid Bin Sizes
+
+```{r size-plot, fig.width=8, fig.height=5}
+ggplot(plasmid_sizes, aes(x = reorder(primary_cluster_id, total_size_bp),
+                          y = total_size_bp / 1000,
+                          fill = sample)) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    title = "Estimated Plasmid Size per Bin",
+    x     = "Plasmid Bin",
+    y     = "Estimated Size (kb)",
+    fill  = "Sample"
+  ) +
+  theme_minimal()
+```
+
+---
+
+## AMR on Conjugative Plasmids
+
+Flagging AMR hits found on conjugative plasmid bins — highest transmission risk.
+
+```{r conjugative-amr}
+conjugative_amr <- plasmid_amr[
+  !is.na(plasmid_amr$predicted_mobility) &
+  plasmid_amr$predicted_mobility == "conjugative" &
+  !is.na(plasmid_amr$Gene.symbol), 
+  c("sample", "primary_cluster_id", "rep_type", "Gene.symbol", "Class", "Subclass",
+    "X..Coverage.of.reference.sequence", "X..Identity.to.reference.sequence")
+]
+names(conjugative_amr)[names(conjugative_amr) == "X..Coverage.of.reference.sequence"] <- "coverage"
+names(conjugative_amr)[names(conjugative_amr) == "X..Identity.to.reference.sequence"]  <- "identity"
+conjugative_amr <- conjugative_amr[order(conjugative_amr$sample, conjugative_amr$primary_cluster_id), ]
+
+if (nrow(conjugative_amr) > 0) {
+  kable(conjugative_amr, caption = "AMR genes on conjugative plasmids", row.names = FALSE) %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+} else {
+  cat("No AMR genes detected on conjugative plasmids.\n")
+}
+```
+
+---
+
+## Session Info
+
+```{r session-info}
+sessionInfo()
+```
