@@ -134,7 +134,7 @@ Read in the combined outputs and join on contig ID to link AMR hits to plasmid m
 
 - Large plasmids (>100kb) will often be fragmented across multiple contigs assigned to the same `primary_cluster_id` — sum `contig_size` within a bin to estimate total plasmid size
 - Some plasmid contigs may be unclassified if they lack known replicon or relaxase sequences
-- Results should be interpreted at the plasmid bin level rather than individual contig level
+- Results should be interpreted at the plasmid bin level rather than individual contig level  
 
 ## Contributing
 
