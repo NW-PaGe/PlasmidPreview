@@ -163,5 +163,8 @@ AMR_bin$rep_type_genes<-paste(AMR_bin$rep_type, AMR_bin$genes,sep = '_')
 AMR_bin$bin_type_genes<-paste(AMR_bin$primary_cluster_id, AMR_bin$genes,sep = '_')
 
 
+
+
+
 ```
 
