@@ -58,18 +58,25 @@ amr <- read.delim(
   header           = TRUE,
   stringsAsFactors = FALSE
 )
-```
 
-**Note:** R replaces spaces and special characters in column names with `.` when
-reading tab-delimited files — e.g. `Contig id` becomes `Contig.id` and
-`Gene symbol` becomes `Gene.symbol`.
+SIZE_COL <- "size"
+
+# Filter to plasmid contigs
+plasmids <- contigs[contigs$molecule_type == "plasmid", ]
+
+# Strip plasmid_ prefix from AMRFinder bin column to match primary_cluster_id
+amr$primary_cluster_id <- sub("^plasmid_", "", amr$plasmid_bin)
+
+
+
+```
 
 ---
 
-## Filter to Plasmid Contigs
+# summarize data
 
 ```{r filter-plasmids}
-plasmids <- contigs[contigs$molecule_type == "plasmid", ]
+
 
 cat("Total contigs:", nrow(contigs), "\n")
 cat("Plasmid contigs:", nrow(plasmids), "\n")
@@ -81,27 +88,67 @@ cat("Samples:", length(unique(plasmids$sample)), "\n")
 ## Join AMR Hits to Plasmid Metadata
 
 ```{r join-data}
-plasmid_amr <- merge(
-  plasmids, amr,
-  by.x  = c("sample", "contig_id"),
-  by.y  = c("sample", "Contig.id"),
-  all.x = TRUE
+# Summarize MOB-recon to bin level
+bin_size <- aggregate(plasmids[[SIZE_COL]] ~ sample + primary_cluster_id, data=plasmids, FUN=sum)
+names(bin_size)[3] <- "total_bp"
+bin_size$total_kb  <- round(bin_size$total_bp / 1000, 2)
+
+bin_size$n_contigs <- as.integer(tapply(
+  plasmids[[SIZE_COL]],
+  paste(plasmids$sample, plasmids$primary_cluster_id),
+  length
+)[paste(bin_size$sample, bin_size$primary_cluster_id)])
+
+bin_size$rep_type <- tapply(
+  plasmids$rep_type.s.,
+  paste(plasmids$sample, plasmids$primary_cluster_id),
+  function(x) paste(unique(x[!is.na(x) & x != "-"]), collapse="; ")
+)[paste(bin_size$sample, bin_size$primary_cluster_id)]
+
+bin_size$mobility <- tapply(
+  plasmids$predicted_mobility,
+  paste(plasmids$sample, plasmids$primary_cluster_id),
+  function(x) paste(unique(x[!is.na(x) & x != "-"]), collapse="; ")
+)[paste(bin_size$sample, bin_size$primary_cluster_id)]
+
+# Summarize AMRFinder to bin level
+amr_hits <- amr[!is.na(amr$Gene.symbol), ]
+
+bin_amr <- aggregate(
+  cbind(genes=Gene.symbol, classes=Class, subclasses=Subclass) ~ sample + primary_cluster_id,
+  data = amr_hits,
+  FUN  = function(x) paste(unique(x[!is.na(x)]), collapse="; ")
 )
-```
+bin_amr$n_amr_hits <- as.integer(tapply(
+  amr_hits$Gene.symbol,
+  paste(amr_hits$sample, amr_hits$primary_cluster_id),
+  length
+)[paste(bin_amr$sample, bin_amr$primary_cluster_id)])
 
----
-
-## Summary Tables and figures
-
-```{r}
-# Which Inc groups carry which resistance classes?
-table(plasmid_amr$rep_type, plasmid_amr$Class)
-
-# How many plasmid bins per sample?
-aggregate(primary_cluster_id ~ sample, data=plasmids, FUN=function(x) length(unique(x)))
-
-# Total plasmid size per bin (sum contigs within each bin)
-aggregate(contig_size ~ sample + primary_cluster_id, data=plasmids, FUN=sum)
+# Join
+bin_combined <- merge(bin_size, bin_amr, by=c("sample", "primary_cluster_id"), all.x=TRUE)
+bin_combined$has_amr <- !is.na(bin_combined$n_amr_hits)
+bin_combined <- bin_combined[order(bin_combined$sample, -bin_combined$total_bp), ]
 ```
 
 
+### Summarize plasmid bins with AMR genes
+
+Full combined table — one row per plasmid bin with size and AMR cargo.
+Bins with no AMR hits are included with empty gene columns.
+
+```{r cargo-table}
+display_cols <- c("sample", "primary_cluster_id", "rep_type", "mobility",
+                  "n_contigs", "total_kb", "n_amr_hits", "genes", "classes", "subclasses")
+
+kable(bin_combined[, display_cols],
+      caption   = "Plasmid bin size and AMR gene cargo",
+      row.names = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+  scroll_box(height = "400px")
+
+
+```
+
+
+### subset to only plasmid bins with AMR data
