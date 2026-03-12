@@ -152,3 +152,16 @@ kable(bin_combined[, display_cols],
 
 
 ### subset to only plasmid bins with AMR data
+
+```{r}
+AMR_bin<-bin_combined[bin_combined$has_amr==TRUE,]
+
+# make reptype_gene variable to be able to find all unique combos of replication types carrying the same genes (ie unique plasmids)
+AMR_bin$rep_type_genes<-paste(AMR_bin$rep_type, AMR_bin$genes,sep = '_')
+
+# make reptype_gene variable to be able to find all unique combos of plasmid bins  carrying the same genes 
+AMR_bin$bin_type_genes<-paste(AMR_bin$primary_cluster_id, AMR_bin$genes,sep = '_')
+
+
+```
+
