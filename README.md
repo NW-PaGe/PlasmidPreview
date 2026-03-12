@@ -50,17 +50,12 @@ conda install -c bioconda ncbi-amrfinderplus -y
 amrfinder_update --database ./amrfinderplus_db
 ```
 
-### Run with GitHub Codespace
-
-If you don't want to install locally, you can run this repo in a GitHub Codespace:
-
-1. At the root of the repo, click the **Code** dropdown → **Codespaces** tab → click **+**
-2. A Codespace will launch with the environment pre-configured
-3. To access RStudio within the Codespace: go to the **Ports** tab in the terminal panel, find the port labeled "Rstudio", and click *Open in Browser*
-
 ## Usage
 
-Run scripts in this order from your working directory:
+Run scripts in this order from your working directory:  
+
+**note** this runs each sample sequentially and will take several minutes per sample for mob-recon
+**TODO** parallelize workflow and/or move to sequera or aws batch to make hundreds of samples take the time it takes to run one.  
 
 ```bash
 # 1. Classify and reconstruct plasmids
@@ -85,42 +80,19 @@ MOB-recon and AMRFinderPlus answer different but complementary questions:
 
 **AMRFinderPlus** searches the plasmid contig FASTAs produced by MOB-recon for antimicrobial resistance genes, point mutations, and virulence factors.
 
-**The key linkage** is the contig name — each contig appears in both:
-- `contig_report.txt` from MOB-recon (which plasmid bin it belongs to, replicon type, mobility)
-- AMRFinderPlus output (which resistance genes it carries)
+**The key linkage** is the contig bin — each bin appears in both:
+- `contig_report.txt` from MOB-recon (which plasmid bin it belongs to, replicon type, mobility- called: primary_cluster_id)
+- AMRFinderPlus output (which resistance genes it carries- called: plasmid_bin)
 
-Joining on contig name lets you answer questions like:
+Joining on plasmid bins lets you answer questions like:
 - Which Inc groups are carrying which resistance genes?
 - Are carbapenemase genes on conjugative plasmids?
 - Which plasmid bins carry multiple resistance genes?
 
 ## R Analysis to Combine MOB-suite + AMRFinderPlus Data
 
-Read in the combined outputs and join on contig ID to link AMR hits to plasmid metadata. Note that R replaces spaces and special characters in column names with `.` when reading in tab-delimited files — so for example `Contig id` becomes `Contig.id` and `Gene symbol` becomes `Gene.symbol`.
+Read in the combined outputs and join on contig ID to link AMR hits to plasmid metadata using the Rmd notebook in the notebooks section.  
 
-```r
-# Read in the data
-contigs <- read.delim("combined_contig_report.tsv", sep="\t", header=TRUE, stringsAsFactors=FALSE)
-amr     <- read.delim("combined_amrfinder.tsv", sep="\t", header=TRUE, stringsAsFactors=FALSE)
-
-# Filter to plasmid contigs only
-plasmids <- contigs[contigs$molecule_type == "plasmid", ]
-
-# Join AMR hits to plasmid metadata on sample + contig ID
-plasmid_amr <- merge(plasmids, amr,
-                     by.x = c("sample", "contig_id"),
-                     by.y = c("sample", "Contig.id"),
-                     all.x = TRUE)
-
-# Which Inc groups carry which resistance classes?
-table(plasmid_amr$rep_type, plasmid_amr$Class)
-
-# How many plasmid bins per sample?
-aggregate(primary_cluster_id ~ sample, data=plasmids, FUN=function(x) length(unique(x)))
-
-# Total plasmid size per bin (sum contigs within each bin)
-aggregate(contig_size ~ sample + primary_cluster_id, data=plasmids, FUN=sum)
-```
 
 ## Output Files
 
@@ -166,7 +138,7 @@ aggregate(contig_size ~ sample + primary_cluster_id, data=plasmids, FUN=sum)
 
 ## Contributing
 
-Issues and pull requests welcome. Please open an issue first to discuss proposed changes.
+
 
 ## Citations
 
@@ -180,9 +152,9 @@ Feldgarden M, et al. (2021) AMRFinderPlus and the Reference Gene Catalog facilit
 
 Feldgarden M, et al. (2022) Curation of the AMRFinderPlus databases: applications, functionality and impact. *Microbial Genomics* 8:mgen000832. doi: 10.1099/mgen.0.000832
 
-**Reference workflow**
+**Reference workflow inspiration**
 Sauerborn et al. (2026) Resolving plasmid-encoded carbapenem resistance dynamics and reservoirs in a hospital setting through nanopore sequencing. *Microbial Genomics* 12(2). doi: 10.1099/mgen.0.001644
 
 ## License
 
-MIT
+
