@@ -1,6 +1,8 @@
 # plasmid-triage
 
-Plasmid detection and characterization workflow using MOB-recon and AMRFinderPlus for short-read WGS assemblies. Can be used to triage short-read assemblies for long-read sequencing.
+This is a filtering/hypothesis-generating workflow for plasmid detection and characterization. It uses MOB-recon and AMRFinderPlus on short-read WGS assemblies. 
+
+This workflow can be used to triage short-read assemblies for long-read sequencing, which can then determine plasmid content of bacterial isolate sequences.
 
 ## Background
 
@@ -69,6 +71,8 @@ bash scripts/combine_contig_reports.sh results/ combined_contig_report.tsv
 bash scripts/combine_amrfinder.sh results/ combined_amrfinder.tsv
 ```
 
+If the plasmid/chromosome for a given plasmid result is ambiguous, treat  the contig as a possible plasmid sequence for filtering-  this workflow is a screen, and we want to increase the chances of detecting plasmids at the expense of potentially having some false positives- we do not want to have false negative plasmid calls (ie miss samples that should really go to long-read sequencing for more definitive plasmid detection analysis)  
+
 ## How MOB-recon and AMRFinderPlus Results Are Combined
 
 MOB-recon and AMRFinderPlus answer different but complementary questions:
@@ -84,10 +88,12 @@ MOB-recon and AMRFinderPlus answer different but complementary questions:
 - `contig_report.txt` from MOB-recon (which plasmid bin it belongs to, replicon type, mobility- called: primary_cluster_id)
 - AMRFinderPlus output (which resistance genes it carries- called: plasmid_bin)
 
-Joining on plasmid bins lets you answer questions like:
+Joining on plasmid bins lets you filter (triage) short read shotgun genome sequences for samples where the following questions may be relevant :
 - Which Inc groups are carrying which resistance genes?
 - Are carbapenemase genes on conjugative plasmids?
 - Which plasmid bins carry multiple resistance genes?
+
+**Note:** these questions can only definitively be addressed with long-read data
 
 ## R Analysis to Combine MOB-suite + AMRFinderPlus Data
 
@@ -132,6 +138,7 @@ Read in the combined outputs and join on contig ID to link AMR hits to plasmid m
 
 ## Notes on Short-Read Assemblies
 
+-this workflow may misclassify chromosomal sequences as plasmids- this can happen with multireplicon and large plasmids.  This could manifest as no plasmids detected, but mob_recon results multiple contigs marked as chromosomes-ie plasmids may be present but not detected by mob_recon.  
 - Large plasmids (>100kb) will often be fragmented across multiple contigs assigned to the same `primary_cluster_id` — sum `contig_size` within a bin to estimate total plasmid size
 - Some plasmid contigs may be unclassified if they lack known replicon or relaxase sequences
 - Results should be interpreted at the plasmid bin level rather than individual contig level  
