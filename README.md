@@ -28,7 +28,11 @@ This workflow detects and characterizes plasmids in bacterial whole genome seque
 
 ## Input
 
-Assembled contigs in FASTA format, one file per sample. Edit `config/params.sh` to point to your assemblies directory and results path:
+Assembled contigs in FASTA format, one file per sample inside a folder named assemblies
+
+## Params
+
+The scripts in this repo reference the paths listed in the file `config/params.sh`. Edit `config/params.sh` to point to your assemblies directory and results path:
 
 ```bash
 THREADS=8
