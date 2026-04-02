@@ -70,6 +70,30 @@ pip install mob-suite
 amrfinder_update --database ./amrfinderplus_db
 ```
 
+## AMRFinderPlus Database Setup
+
+After creating and activating the conda environment, the bundled database may be outdated. 
+Always update the database before running:
+```bash
+cd ~
+mkdir -p ~/tmp
+export TMPDIR=~/tmp
+amrfinder --update
+```
+
+Verify the software and database versions:
+```bash
+amrfinder --database_version
+```
+
+As of this writing, the expected versions are:
+- **Software:** 4.2.7
+- **Database:** 2026-03-24.1
+
+> **Note:** `amrfinder --update` must be run from `~` (not a subdirectory that may not persist),
+> and `TMPDIR` must point to a directory with sufficient space. On EC2 instances, `/tmp` is often
+> too small to build the BLAST index — redirecting to `~/tmp` resolves this.
+
 ## Usage
 
 Run scripts in this order from your working directory:  
