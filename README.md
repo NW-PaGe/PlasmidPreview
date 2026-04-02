@@ -2,7 +2,7 @@
 
 This is a filtering/hypothesis-generating workflow for plasmid detection and characterization. It uses MOB-recon and AMRFinderPlus on short-read WGS assemblies. 
 
-This workflow can be used to triage short-read assemblies for long-read sequencing, which can then determine plasmid content of bacterial isolate sequences.
+This workflow can be used to triage short-read contig-level assemblies for long-read sequencing, which can then determine plasmid content of bacterial isolate sequences.
 
 ## Background
 
