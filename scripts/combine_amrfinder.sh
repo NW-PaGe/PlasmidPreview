@@ -27,13 +27,13 @@ for f in $RESULTS_DIR/*/*_amrfinder.tsv; do
     fi
 
     while IFS= read -r line; do
-        echo -e "${sample}\t${molecule_type}\t${contig_bin}\t${line}"
+        echo -e "${sample}\t${molecule_type}\t${contig_bin}\t${line}" >> $OUTPUT_FILE
         ((total_hits++))
         [[ "$molecule_type" == "chromosome" ]] && ((chromosome_hits++))
         [[ "$molecule_type" == "plasmid" ]]    && ((plasmid_hits++))
     done < <(tail -n +2 $f)
 
-done >> $OUTPUT_FILE
+done
 
 echo "Done — written to $OUTPUT_FILE"
 echo "Samples included:  ${#seen_samples[@]}"

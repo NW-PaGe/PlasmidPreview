@@ -18,14 +18,14 @@ for f in $RESULTS_DIR/*/contig_report.txt; do
     seen_samples[$sample]=1
 
     while IFS=$'\t' read -r -a fields; do
-        molecule_type="${fields[2]}"
-        echo -e "${sample}\t$(IFS=$'\t'; echo "${fields[*]}")"
+        molecule_type="${fields[1]}"
+        echo -e "${sample}\t$(IFS=$'\t'; echo "${fields[*]}")" >> $OUTPUT_FILE
         ((total_contigs++))
         [[ "$molecule_type" == "chromosome" ]] && ((chromosome_contigs++))
         [[ "$molecule_type" == "plasmid" ]]    && ((plasmid_contigs++))
     done < <(tail -n +2 $f)
 
-done >> $OUTPUT_FILE
+done
 
 echo "Done — written to $OUTPUT_FILE"
 echo "Samples included:    ${#seen_samples[@]}"
