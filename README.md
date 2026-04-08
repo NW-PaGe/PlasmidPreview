@@ -105,7 +105,7 @@ Run scripts in this order from your working directory:
 # 1. Classify and reconstruct plasmids
 bash scripts/run_mobrecon.sh
 
-# 2. Detect AMR genes on plasmid contigs
+# 2. Detect AMR genes on all contigs (plasmid and chromosomal-as determined by mobrecon)
 bash scripts/run_amrfinder.sh
 
 # 3. Combine outputs across all samples
@@ -150,6 +150,7 @@ Read in the combined outputs and join on contig ID to link AMR hits to plasmid m
 | `results/{sample}/plasmid_*.fasta` | Reconstructed plasmid bin sequences |
 | `results/{sample}/chromosome.fasta` | Chromosomal contigs |
 | `results/{sample}/plasmid_*_amrfinder.tsv` | AMR genes per plasmid bin |
+| `results/{sample}/chromosome_amrfinder.tsv` | AMR genes on chromosomal contigs |
 | `combined_contig_report.tsv` | All contig reports merged with sample column |
 | `combined_amrfinder.tsv` | All AMR results merged with sample and plasmid bin columns |
 
@@ -171,7 +172,8 @@ Read in the combined outputs and join on contig ID to link AMR hits to plasmid m
 | Column | Description |
 |--------|-------------|
 | `sample` | Sample name |
-| `plasmid_bin` | Which plasmid bin this hit came from |
+| `molecule_type` | plasmid or chromosome |
+| `contig_bin` | Which plasmid bin or chromosome this hit came from |
 | `Gene symbol` | Resistance gene name |
 | `Class` | Antibiotic class |
 | `Subclass` | Antibiotic subclass |
