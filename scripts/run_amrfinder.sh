@@ -1,22 +1,36 @@
 #!/bin/bash
-# Run AMRFinderPlus on plasmid contigs identified by MOB-recon
+# Run AMRFinderPlus on all contigs identified by MOB-recon (plasmid and chromosome)
 # Usage: bash scripts/run_amrfinder.sh
 
 source config/params.sh
 
 for sample_dir in ${RESULTS_DIR}/*/; do
     sample=$(basename $sample_dir)
-    for plasmid in ${sample_dir}plasmid_*.fasta; do
-        [ -f "$plasmid" ] || continue
-        plasmid_name=$(basename $plasmid .fasta)
-        echo "Running AMRFinderPlus on ${sample} ${plasmid_name}..."
+
+    # Run on plasmid bins (plasmid_*.fasta)
+    for fasta in ${sample_dir}plasmid_*.fasta; do
+        [ -f "$fasta" ] || continue
+        contig_name=$(basename $fasta .fasta)
+        echo "Running AMRFinderPlus on ${sample} ${contig_name}..."
         amrfinder \
-            --nucleotide $plasmid \
+            --nucleotide $fasta \
             --database ${AMR_DB} \
-            --output ${RESULTS_DIR}/${sample}/${plasmid_name}_amrfinder.tsv \
+            --output ${RESULTS_DIR}/${sample}/${contig_name}_amrfinder.tsv \
             --threads ${THREADS} \
             --plus
     done
+
+    # Run on chromosome contigs
+    if [ -f "${sample_dir}chromosome.fasta" ]; then
+        echo "Running AMRFinderPlus on ${sample} chromosome..."
+        amrfinder \
+            --nucleotide ${sample_dir}chromosome.fasta \
+            --database ${AMR_DB} \
+            --output ${RESULTS_DIR}/${sample}/chromosome_amrfinder.tsv \
+            --threads ${THREADS} \
+            --plus
+    fi
+
 done
 
 echo "AMRFinderPlus complete"
