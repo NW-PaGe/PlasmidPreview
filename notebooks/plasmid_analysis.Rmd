@@ -107,7 +107,7 @@ plasmid_amr <- amr[amr$molecule_type == "plasmid", ] %>%
 
 # Join bin size to AMR hits — only bins with AMR
 plasmid_bin_amr <- bin_size %>%
-  inner_join(plasmid_amr, by = c("sample", "primary_cluster_id")) %>%
+  inner_join(plasmid_amr, by = c("sample")) %>%
   arrange(sample, desc(total_bp))
 
 # Display
@@ -151,6 +151,7 @@ kable(
 ) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
   scroll_box(height = "400px")
+
 ```
 
 ---
@@ -159,7 +160,9 @@ kable(
 
 > **Placeholder** — add gene symbols or classes of interest here for manual review prioritization.
 > Examples: carbapenemases (blaNDM, blaKPC, blaOXA-48), ESBLs (blaCTX-M), colistin (mcr).
-```{r literature-flags} 
+
+```{r}
+
 
 # Add gene symbols to flag here
 flag_genes <- c(
@@ -187,9 +190,11 @@ Wide-format dataframe for Auspice visualization. One row per sample, one column 
 unique plasmid/chromosome fingerprint. Column names are constructed as:
 `{molecule_type}_{primary_cluster_id}_{rep_type}_{amr_genes_sorted}`.
 Cell values are total bp coverage of that bin in that sample.
-```{r auspice-output}
+
+```{r, auspice-output}
 # --- Plasmid columns ---
 # Build fingerprint: plasmid_{primary_cluster_id}_{rep_type}_{sorted_amr_genes}
+
 plasmid_auspice <- plasmid_bin_amr %>%
   mutate(
     rep_type_clean = ifelse(rep_type == "" | is.na(rep_type), "-", rep_type),
