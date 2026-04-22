@@ -26,25 +26,27 @@ gene calls to triage short-read assemblies for long-read sequencing based on:
 - Presence of potential plasmids carrying AMR genes
 - Presence of AMR genes on chromosome-designated contigs that may be misclassified plasmids
 
+Note: this workflow is a screen. We prioritize sensitivity over specificity — ambiguous 
+calls are retained as potential plasmid detections to avoid false negatives.
+
 ---
 
 ## Load Libraries
 ```{r libraries}
 library(dplyr)
 library(tidyr)
-library(ggplot2)
 library(knitr)
 library(kableExtra)
-
 ```
 
 ---
 
 ## Load Data
 
- **Edit the file paths below** to point to your combined output files.
- 
-```{r, load-data}
+> **Edit the file paths below** to point to your combined output files.
+
+```{r load-data} 
+
 contigs <- read.delim(
   "../Raabe_et_al_test/combined_contig_report.tsv",
   sep              = "\t",
@@ -58,19 +60,20 @@ amr <- read.delim(
   header           = TRUE,
   stringsAsFactors = FALSE
 )
+
 ```
 
 ---
 
 ## Data Summary
-```{r, summary}
+```{r summary}
+
 cat("Total contigs:       ", nrow(contigs), "\n")
 cat("Plasmid contigs:     ", sum(contigs$molecule_type == "plasmid"), "\n")
 cat("Chromosome contigs:  ", sum(contigs$molecule_type == "chromosome"), "\n")
 cat("Samples:             ", length(unique(contigs$sample)), "\n")
 cat("Total AMR hits:      ", nrow(amr), "\n")
-cat("Plasmid AMR hits:    ", sum(amr$molecule_type == "plasmid"), "\n")
-cat("Chromosome AMR hits: ", sum(amr$molecule_type == "chromosome"), "\n")
+
 ```
 
 ---
@@ -80,6 +83,7 @@ cat("Chromosome AMR hits: ", sum(amr$molecule_type == "chromosome"), "\n")
 One row per plasmid bin per sample, sorted by total bp descending within each sample.
 Only bins classified as `plasmid` by MOB-recon with at least one AMR hit are shown.
 ```{r plasmid-amr-table}
+
 # Summarize plasmid contigs to bin level
 plasmid_contigs <- contigs[contigs$molecule_type == "plasmid", ]
 
@@ -95,22 +99,23 @@ bin_size <- plasmid_contigs %>%
   )
 
 # Summarize AMR hits for plasmid bins
+# Strip plasmid_ prefix from contig_bin to match primary_cluster_id
 plasmid_amr <- amr[amr$molecule_type == "plasmid", ] %>%
   filter(!is.na(Element.symbol)) %>%
-  group_by(sample, contig_bin) %>%
+  mutate(primary_cluster_id = sub("^plasmid_", "", contig_bin)) %>%
+  group_by(sample, primary_cluster_id) %>%
   summarise(
-    n_amr_hits = n(),
-    amr_genes  = paste(sort(unique(Element.symbol)), collapse = "; "),
+    n_amr_hits  = n(),
+    amr_genes   = paste(sort(unique(Element.symbol)), collapse = "; "),
     amr_classes = paste(sort(unique(Class[!is.na(Class)])), collapse = "; "),
-    .groups    = "drop"
+    .groups     = "drop"
   )
 
-# Join bin size to AMR hits — only bins with AMR
+# Join on both sample and primary_cluster_id — only bins with AMR hits
 plasmid_bin_amr <- bin_size %>%
-  inner_join(plasmid_amr, by = c("sample")) %>%
+  inner_join(plasmid_amr, by = c("sample", "primary_cluster_id")) %>%
   arrange(sample, desc(total_bp))
 
-# Display
 kable(
   plasmid_bin_amr[, c("sample", "primary_cluster_id", "rep_type", "mobility",
                        "n_contigs", "total_kb", "n_amr_hits", "amr_genes", "amr_classes")],
@@ -118,17 +123,20 @@ kable(
   row.names = FALSE
 ) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
-  scroll_box(height = "400px")
+  scroll_box(height = "800px")
 ```
+
+
+
 
 ---
 
 ## Table 2 — Chromosome Contigs with AMR Genes
 
-One row per sample. Columns are individual AMR genes (count of hits per sample).
+One row per sample, one column per unique AMR gene (hit count).
 Chromosome-designated contigs may represent misclassified plasmids in short-read assemblies.
 ```{r chromosome-amr-table}
-# Filter to chromosome AMR hits
+
 chrom_amr <- amr[amr$molecule_type == "chromosome", ] %>%
   filter(!is.na(Element.symbol))
 
@@ -143,7 +151,6 @@ chrom_amr_wide <- chrom_amr %>%
   ) %>%
   arrange(sample)
 
-# Display
 kable(
   chrom_amr_wide,
   caption   = "AMR gene counts on chromosome-designated contigs per sample",
@@ -154,13 +161,20 @@ kable(
 
 ```
 
+## Summary of plasmid AMR hits on both plasmid designated contigs OR chromosme designated contigs
+
+```{r}
+
+cat("Samples with plasmid AMR (linked on the same contigs):    ", length(unique(plasmid_bin_amr$sample)), "\n")
+cat("Samples with Chromosomal AMR (Examine samples for genes that could be on plasmids):      ", length(unique(chrom_amr$sample)), "\n")
+```
 ---
 
 ## Literature-Based Flagging
 
-> **Placeholder** — add gene symbols or classes of interest here for manual review prioritization.
-> Examples: carbapenemases (blaNDM, blaKPC, blaOXA-48), ESBLs (blaCTX-M), colistin (mcr).
-
+ **Placeholder** — add gene symbols or classes of interest here for manual review 
+ prioritization. Examples: carbapenemases (blaNDM, blaKPC, blaOXA-48), ESBLs (blaCTX-M), 
+ colistin (mcr).
 ```{r}
 
 
@@ -180,6 +194,7 @@ if (length(flag_genes) > 0) {
 } else {
   message("No literature flags defined — skipping flagging step.")
 }
+
 ```
 
 ---
@@ -187,14 +202,15 @@ if (length(flag_genes) > 0) {
 ## Auspice Metadata Output
 
 Wide-format dataframe for Auspice visualization. One row per sample, one column per
-unique plasmid/chromosome fingerprint. Column names are constructed as:
+unique plasmid or chromosome AMR fingerprint. Column names are constructed as:
 `{molecule_type}_{primary_cluster_id}_{rep_type}_{amr_genes_sorted}`.
-Cell values are total bp coverage of that bin in that sample.
+Cell values are total coverage (in bp) of that bin in that sample.
+AMR genes are sorted alphabetically within each fingerprint so the same plasmid
+produces the same column name across different samples.
+```{r}
 
-```{r, auspice-output}
 # --- Plasmid columns ---
-# Build fingerprint: plasmid_{primary_cluster_id}_{rep_type}_{sorted_amr_genes}
-
+# Fingerprint: plasmid_{primary_cluster_id}_{rep_type}_{sorted_amr_genes}
 plasmid_auspice <- plasmid_bin_amr %>%
   mutate(
     rep_type_clean = ifelse(rep_type == "" | is.na(rep_type), "-", rep_type),
@@ -208,35 +224,38 @@ plasmid_auspice <- plasmid_bin_amr %>%
   )
 
 # --- Chromosome columns ---
-# One column per unique AMR gene on chromosome contigs
-# Column name: chromosome_chromosome_-_{gene}
+# Fingerprint: chromosome_chromosome_-_{gene}
 chrom_auspice <- chrom_amr %>%
   group_by(sample, Element.symbol) %>%
-  summarise(total_bp = n(), .groups = "drop") %>%   # count as proxy; no contig bp per gene in amr output
+  summarise(
+    # Use total bp of contigs carrying this gene as the value
+    hit_count = n(),
+    .groups   = "drop"
+  ) %>%
   mutate(fingerprint = paste("chromosome", "chromosome", "-", Element.symbol, sep = "_")) %>%
-  select(sample, fingerprint, total_bp) %>%
+  select(sample, fingerprint, hit_count) %>%
   pivot_wider(
     names_from  = fingerprint,
-    values_from = total_bp,
+    values_from = hit_count,
     values_fill = 0
   )
 
-# --- Join plasmid and chromosome wide tables ---
+# --- Combine into one wide dataframe ---
 all_samples <- data.frame(sample_id = unique(contigs$sample))
 
 auspice_df <- all_samples %>%
   left_join(plasmid_auspice, by = c("sample_id" = "sample")) %>%
   left_join(chrom_auspice,   by = c("sample_id" = "sample"))
 
-# Replace NAs with 0 for samples with no plasmid or chromosome AMR hits
+# Replace NAs with 0 for samples with no hits
 auspice_df[is.na(auspice_df)] <- 0
 
 # Write out
 write.csv(auspice_df, "plasmid_triage_auspice_metadata.csv", row.names = FALSE)
 
 cat("Auspice metadata written to plasmid_triage_auspice_metadata.csv\n")
-cat("Rows (samples):  ", nrow(auspice_df), "\n")
-cat("Columns (total): ", ncol(auspice_df), "\n")
-cat("Plasmid columns: ", ncol(plasmid_auspice) - 1, "\n")
+cat("Rows (samples):         ", nrow(auspice_df), "\n")
+cat("Total columns:          ", ncol(auspice_df), "\n")
+cat("Plasmid columns:        ", ncol(plasmid_auspice) - 1, "\n")
 cat("Chromosome AMR columns: ", ncol(chrom_auspice) - 1, "\n")
 ```
