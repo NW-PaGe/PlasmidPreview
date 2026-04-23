@@ -37,6 +37,7 @@ library(dplyr)
 library(tidyr)
 library(knitr)
 library(kableExtra)
+library(ggplot2)
 ```
 
 ---
@@ -258,4 +259,155 @@ cat("Rows (samples):         ", nrow(auspice_df), "\n")
 cat("Total columns:          ", ncol(auspice_df), "\n")
 cat("Plasmid columns:        ", ncol(plasmid_auspice) - 1, "\n")
 cat("Chromosome AMR columns: ", ncol(chrom_auspice) - 1, "\n")
+```
+---
+
+## Summarize samples with potential plasmids and AMR genes in common
+-summarize amr detection and potential plasmid detection across samples included in the input data  
+-This helps evaluate if there are samples that potentially share plasmid content (ie supports hypothesis that this could be due to plasmid transfer or transmission)   
+
+
+### Plasmid Fingerprint Summary
+```{r plasmid-fingerprint-summary}
+# Build full fingerprint: primary_cluster_id + sorted amr_genes
+plasmid_fingerprints <- plasmid_bin_amr %>%
+  mutate(
+    rep_type_clean = ifelse(rep_type == "" | is.na(rep_type), "-", rep_type),
+    fingerprint    = paste(primary_cluster_id, amr_genes, sep = "_")
+  )
+
+# Summary table: one row per fingerprint, count and list of samples
+plasmid_fingerprint_summary <- plasmid_fingerprints %>%
+  group_by(fingerprint, primary_cluster_id, rep_type_clean, amr_genes, amr_classes) %>%
+  summarise(
+    n_samples   = n_distinct(sample),
+    samples     = paste(sort(unique(sample)), collapse = "; "),
+    .groups     = "drop"
+  ) %>%
+  arrange(desc(n_samples))
+
+kable(
+  plasmid_fingerprint_summary[, c("fingerprint", "primary_cluster_id", "rep_type_clean",
+                                   "amr_genes", "amr_classes", "n_samples", "samples")],
+  caption   = "Plasmid fingerprints detected across samples",
+  row.names = FALSE
+) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+  scroll_box(height = "400px")
+```
+
+### Plasmid Fingerprint Presence/Absence Heatmap
+```{r plasmid-heatmap}
+# Build presence/absence matrix
+plasmid_matrix <- plasmid_fingerprints %>%
+  mutate(present = 1) %>%
+  select(sample, fingerprint, present) %>%
+  pivot_wider(
+    names_from  = fingerprint,
+    values_from = present,
+    values_fill = 0
+  ) %>%
+  arrange(sample)
+
+# Save as dataframe for exploration
+plasmid_matrix_df <- as.data.frame(plasmid_matrix)
+
+# Melt for ggplot
+plasmid_matrix_long <- plasmid_matrix %>%
+  pivot_longer(
+    cols      = -sample,
+    names_to  = "fingerprint",
+    values_to = "present"
+  )
+
+ggplot(plasmid_matrix_long, aes(x = fingerprint, y = sample, fill = factor(present))) +
+  geom_tile(color = "white") +
+  scale_fill_manual(
+    values = c("0" = "#f0f0f0", "1" = "#2c7bb6"),
+    labels = c("0" = "absent", "1" = "present"),
+    name   = ""
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x  = element_text(angle = 45, hjust = 1, size = 8),
+    axis.text.y  = element_text(size = 8),
+    panel.grid   = element_blank(),
+    legend.position = "top"
+  ) +
+  labs(
+    title = "Plasmid fingerprint presence/absence across samples",
+    x     = "Plasmid fingerprint (bin + AMR genes)",
+    y     = "Sample"
+  )
+
+```
+
+### Chromosome AMR Gene Summary
+```{r chromosome-fingerprint-summary}
+# Summary table: one row per gene, count and list of samples
+chrom_gene_summary <- chrom_amr %>%
+  filter(!is.na(Element.symbol)) %>%
+  group_by(Element.symbol, Class, Subclass) %>%
+  summarise(
+    n_samples = n_distinct(sample),
+    samples   = paste(sort(unique(sample)), collapse = "; "),
+    .groups   = "drop"
+  ) %>%
+  arrange(desc(n_samples))
+
+kable(
+  chrom_gene_summary,
+  caption   = "Chromosome AMR genes detected across samples",
+  row.names = FALSE
+) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+  scroll_box(height = "400px")
+```
+
+### Chromosome AMR Gene Presence/Absence Heatmap
+```{r chromosome-heatmap}
+# Build presence/absence matrix — count per sample per gene
+chrom_matrix <- chrom_amr %>%
+  filter(!is.na(Element.symbol)) %>%
+  group_by(sample, Element.symbol) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  pivot_wider(
+    names_from  = Element.symbol,
+    values_from = count,
+    values_fill = 0
+  ) %>%
+  arrange(sample)
+
+# Save as dataframe for exploration
+chrom_matrix_df <- as.data.frame(chrom_matrix)
+
+# Melt for ggplot
+chrom_matrix_long <- chrom_matrix %>%
+  pivot_longer(
+    cols      = -sample,
+    names_to  = "gene",
+    values_to = "count"
+  )
+
+ggplot(chrom_matrix_long, aes(x = gene, y = sample, fill = count)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(
+    low  = "#f0f0f0",
+    high = "#d7191c",
+    name = "hit count"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x  = element_text(angle = 45, hjust = 1, size = 8),
+    axis.text.y  = element_text(size = 8),
+    panel.grid   = element_blank(),
+    legend.position = "top"
+  ) +
+  labs(
+    title = "Chromosome AMR gene counts across samples",
+    x     = "AMR gene",
+    y     = "Sample"
+  )
+```
+
 ```
