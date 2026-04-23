@@ -49,14 +49,14 @@ library(ggplot2)
 ```{r load-data} 
 
 contigs <- read.delim(
-  "../Raabe_et_al_test/combined_contig_report.tsv",
+  "../shigella_plasmid_triage_results/shigella_combined_contig_report.tsv",
   sep              = "\t",
   header           = TRUE,
   stringsAsFactors = FALSE
 )
 
 amr <- read.delim(
-  "../Raabe_et_al_test/combined_amrfinder.tsv",
+  "../shigella_plasmid_triage_results/shigella_combined_amrfinder.tsv",
   sep              = "\t",
   header           = TRUE,
   stringsAsFactors = FALSE
@@ -306,67 +306,71 @@ plasmid_matrix <- plasmid_fingerprints %>%
     names_from  = fingerprint,
     values_from = present,
     values_fill = 0
-  ) %>%
-  arrange(sample)
+  )
 
 # Save as dataframe for exploration
 plasmid_matrix_df <- as.data.frame(plasmid_matrix)
 
-# Melt for ggplot
-plasmid_matrix_long <- plasmid_matrix %>%
-  pivot_longer(
-    cols      = -sample,
-    names_to  = "fingerprint",
-    values_to = "present"
-  )
+# Helper to cluster and plot plasmid heatmap
+plot_plasmid_heatmap <- function(mat_df, title) {
+  mat_numeric <- as.matrix(mat_df[, -1])
+  rownames(mat_numeric) <- mat_df$sample
 
-ggplot(plasmid_matrix_long, aes(x = fingerprint, y = sample, fill = factor(present))) +
-  geom_tile(color = "white") +
-  scale_fill_manual(
-    values = c("0" = "#f0f0f0", "1" = "#2c7bb6"),
-    labels = c("0" = "absent", "1" = "present"),
-    name   = ""
-  ) +
-  theme_minimal() +
-  theme(
-    axis.text.x  = element_text(angle = 45, hjust = 1, size = 8),
-    axis.text.y  = element_text(size = 8),
-    panel.grid   = element_blank(),
-    legend.position = "top"
-  ) +
-  labs(
-    title = "Plasmid fingerprint presence/absence across samples",
-    x     = "Plasmid fingerprint (bin + AMR genes)",
-    y     = "Sample"
-  )
+  # Guard: need at least 2 rows and 2 columns to cluster
+  if (nrow(mat_numeric) < 2 | ncol(mat_numeric) < 2) {
+    message("Not enough samples or fingerprints to cluster — skipping: ", title)
+    return(NULL)
+  }
 
+  sample_order <- rownames(mat_numeric)[hclust(dist(mat_numeric))$order]
+  fp_order     <- colnames(mat_numeric)[hclust(dist(t(mat_numeric)))$order]
+
+  mat_df %>%
+    pivot_longer(cols = -sample, names_to = "fingerprint", values_to = "present") %>%
+    mutate(
+      sample      = factor(sample,      levels = sample_order),
+      fingerprint = factor(fingerprint, levels = fp_order)
+    ) %>%
+    ggplot(aes(x = fingerprint, y = sample, fill = factor(present))) +
+    geom_tile(color = "white") +
+    scale_fill_manual(
+      values = c("0" = "#f0f0f0", "1" = "#2c7bb6"),
+      labels = c("0" = "absent",  "1" = "present"),
+      name   = ""
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x     = element_text(angle = 45, hjust = 1, size = 8),
+      axis.text.y     = element_text(size = 8),
+      panel.grid      = element_blank(),
+      legend.position = "top"
+    ) +
+    labs(title = title, x = "Plasmid fingerprint (bin + AMR genes)", y = "Sample")
+}
+
+# Version 1 — all fingerprints
+plot_plasmid_heatmap(
+  plasmid_matrix_df,
+  "Plasmid fingerprint presence/absence — all samples (clustered)"
+)
+
+# Version 2 — drop fingerprints present in only 1 sample
+multi_sample_fps <- names(which(colSums(plasmid_matrix_df[, -1]) > 1))
+
+if (length(multi_sample_fps) == 0) {
+  message("No plasmid fingerprints shared across more than one sample.")
+} else {
+  plasmid_matrix_df_shared <- plasmid_matrix_df[, c("sample", multi_sample_fps)]
+  plot_plasmid_heatmap(
+    plasmid_matrix_df_shared,
+    "Plasmid fingerprint presence/absence — shared across >1 sample (clustered)"
+  )
+}
 ```
 
-### Chromosome AMR Gene Summary
-```{r chromosome-fingerprint-summary}
-# Summary table: one row per gene, count and list of samples
-chrom_gene_summary <- chrom_amr %>%
-  filter(!is.na(Element.symbol)) %>%
-  group_by(Element.symbol, Class, Subclass) %>%
-  summarise(
-    n_samples = n_distinct(sample),
-    samples   = paste(sort(unique(sample)), collapse = "; "),
-    .groups   = "drop"
-  ) %>%
-  arrange(desc(n_samples))
-
-kable(
-  chrom_gene_summary,
-  caption   = "Chromosome AMR genes detected across samples",
-  row.names = FALSE
-) %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
-  scroll_box(height = "400px")
-```
-
-### Chromosome AMR Gene Presence/Absence Heatmap
+## Chromosome AMR genes presence/absence heatmaps
 ```{r chromosome-heatmap}
-# Build presence/absence matrix — count per sample per gene
+# Build count matrix
 chrom_matrix <- chrom_amr %>%
   filter(!is.na(Element.symbol)) %>%
   group_by(sample, Element.symbol) %>%
@@ -375,39 +379,64 @@ chrom_matrix <- chrom_amr %>%
     names_from  = Element.symbol,
     values_from = count,
     values_fill = 0
-  ) %>%
-  arrange(sample)
+  )
 
 # Save as dataframe for exploration
 chrom_matrix_df <- as.data.frame(chrom_matrix)
 
-# Melt for ggplot
-chrom_matrix_long <- chrom_matrix %>%
-  pivot_longer(
-    cols      = -sample,
-    names_to  = "gene",
-    values_to = "count"
-  )
+# Helper to cluster and plot chromosome heatmap
+plot_chrom_heatmap <- function(mat_df, title) {
+  mat_numeric <- as.matrix(mat_df[, -1])
+  rownames(mat_numeric) <- mat_df$sample
 
-ggplot(chrom_matrix_long, aes(x = gene, y = sample, fill = count)) +
-  geom_tile(color = "white") +
-  scale_fill_gradient(
-    low  = "#f0f0f0",
-    high = "#d7191c",
-    name = "hit count"
-  ) +
-  theme_minimal() +
-  theme(
-    axis.text.x  = element_text(angle = 45, hjust = 1, size = 8),
-    axis.text.y  = element_text(size = 8),
-    panel.grid   = element_blank(),
-    legend.position = "top"
-  ) +
-  labs(
-    title = "Chromosome AMR gene counts across samples",
-    x     = "AMR gene",
-    y     = "Sample"
-  )
-```
+  # Guard: need at least 2 rows and 2 columns to cluster
+  if (nrow(mat_numeric) < 2 | ncol(mat_numeric) < 2) {
+    message("Not enough samples or genes to cluster — skipping: ", title)
+    return(NULL)
+  }
 
+  sample_order <- rownames(mat_numeric)[hclust(dist(mat_numeric))$order]
+  gene_order   <- colnames(mat_numeric)[hclust(dist(t(mat_numeric)))$order]
+
+  mat_df %>%
+    pivot_longer(cols = -sample, names_to = "gene", values_to = "count") %>%
+    mutate(
+      sample = factor(sample, levels = sample_order),
+      gene   = factor(gene,   levels = gene_order)
+    ) %>%
+    ggplot(aes(x = gene, y = sample, fill = count)) +
+    geom_tile(color = "white") +
+    scale_fill_gradient(
+      low  = "#f0f0f0",
+      high = "#d7191c",
+      name = "hit count"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x     = element_text(angle = 45, hjust = 1, size = 8),
+      axis.text.y     = element_text(size = 8),
+      panel.grid      = element_blank(),
+      legend.position = "top"
+    ) +
+    labs(title = title, x = "AMR gene", y = "Sample")
+}
+
+# Version 1 — all genes
+plot_chrom_heatmap(
+  chrom_matrix_df,
+  "Chromosome AMR gene counts — all samples (clustered)"
+)
+
+# Version 2 — drop genes present in only 1 sample
+multi_sample_genes <- names(which(colSums(chrom_matrix_df[, -1] > 0) > 1))
+
+if (length(multi_sample_genes) == 0) {
+  message("No chromosome AMR genes shared across more than one sample.")
+} else {
+  chrom_matrix_df_shared <- chrom_matrix_df[, c("sample", multi_sample_genes)]
+  plot_chrom_heatmap(
+    chrom_matrix_df_shared,
+    "Chromosome AMR gene counts — shared across >1 sample (clustered)"
+  )
+}
 ```
