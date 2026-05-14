@@ -43,19 +43,7 @@ INPUT_PATH=~/plasmid-triage/assemblies
 
 ## Installation
 
-Installation using conda
-```bash
-# Create conda environment
-conda create -n plasmid python=3.9 -y
-conda activate plasmid
 
-# Install tools
-pip install mob-suite
-conda install -c bioconda ncbi-amrfinderplus -y
-
-# Download AMRFinderPlus database
-amrfinder_update --database ./amrfinderplus_db
-```
 Installation using mamba
 ```
 conda create -n mamba-env -c conda-forge mamba -y
@@ -64,7 +52,12 @@ conda activate mamba-env
 mamba create -n plasmid -c conda-forge -c bioconda python=3.9 ncbi-amrfinderplus -y
 conda activate plasmid
 
+# MOB-suite is not available on conda and must be installed via pip. 
+#Dependencies must be installed separately via conda **before** running `mob_init`:
+
+conda install -c bioconda -c conda-forge mash blast muscle
 pip install mob-suite
+mob_init --database_directory ~/mobsuite_db
 
 # Download AMRFinderPlus database
 amrfinder_update --database ./amrfinderplus_db
