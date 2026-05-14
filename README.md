@@ -96,7 +96,7 @@ As of this writing, the expected versions are:
 
 ## Usage
 
-Run scripts in this order from your working directory:  
+Run scripts in this order from your working directory (plasmid-triage):  
 
 **note** this runs each sample sequentially and will take several minutes per sample for mob-recon
 **TODO** parallelize workflow and/or move to sequera or aws batch to make hundreds of samples take the time it takes to run one.  
