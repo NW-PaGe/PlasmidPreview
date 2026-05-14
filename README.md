@@ -32,7 +32,7 @@ Assembled contigs in FASTA format, one file per sample inside a folder named ass
 
 ## Params
 
-The scripts in this repo reference the paths listed in the file `config/params.sh`. Edit `config/params.sh` to point to your assemblies directory and results path:
+The scripts in this repo reference the paths listed in the file `config/params.sh`. Edit `config/params.sh` to point to your assemblies directory and results path (Note you may need to create directories for your assemblies and results (or use a S3 URI for assemblies):
 
 ```bash
 THREADS=8
