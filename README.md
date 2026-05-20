@@ -112,8 +112,8 @@ To evaluate if a species is supported run:
 ```bash
 amrfinder --list_organisms
 ```
-either leave organism in params.sh blank, or insert species of interest per formatting above in --list_organisms ie Klebsiella_pneumoniae
-**Note** A single organism value is applied to all samples in the run, for mixed species runs, run separately. 
+either leave organism in params.sh blank, or insert species of interest per formatting above in --list_organisms ie Klebsiella_pneumoniae  
+**Note:** A single organism value is applied to all samples in the run, for mixed species runs, run separately. 
 
 If the plasmid/chromosome for a given plasmid result is ambiguous, treat  the contig as a possible plasmid sequence for filtering-  this workflow is a screen, and we want to increase the chances of detecting plasmids at the expense of potentially having some false positives- we do not want to have false negative plasmid calls (ie miss samples that should really go to long-read sequencing for more definitive plasmid detection analysis)  
 
