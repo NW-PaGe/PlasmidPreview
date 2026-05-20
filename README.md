@@ -105,6 +105,9 @@ bash scripts/run_amrfinder.sh
 bash scripts/combine_contig_reports.sh results/ combined_contig_report.tsv
 bash scripts/combine_amrfinder.sh results/ combined_amrfinder.tsv
 ```
+
+If the plasmid/chromosome for a given plasmid result is ambiguous, treat  the contig as a possible plasmid sequence for filtering-  this workflow is a screen, and we want to increase the chances of detecting plasmids at the expense of potentially having some false positives- we do not want to have false negative plasmid calls (ie miss samples that should really go to long-read sequencing for more definitive plasmid detection analysis) 
+
 ### Species-specific AMR detection (optional)
 AMRfinderPlus can apply species-specific point mutation information when you provide the species name for some species.  
 To evaluate if a species is supported run:  
@@ -115,8 +118,7 @@ amrfinder --list_organisms
 either leave organism in params.sh blank, or insert species of interest per formatting above in --list_organisms ie Klebsiella_pneumoniae  
 **Note:** A single organism value is applied to all samples in the run, for mixed species runs, run separately. 
 
-If the plasmid/chromosome for a given plasmid result is ambiguous, treat  the contig as a possible plasmid sequence for filtering-  this workflow is a screen, and we want to increase the chances of detecting plasmids at the expense of potentially having some false positives- we do not want to have false negative plasmid calls (ie miss samples that should really go to long-read sequencing for more definitive plasmid detection analysis)  
-
+ 
 ## How MOB-recon and AMRFinderPlus Results Are Combined
 
 MOB-recon and AMRFinderPlus answer different but complementary questions:
