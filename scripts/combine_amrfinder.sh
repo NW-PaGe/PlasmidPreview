@@ -2,7 +2,9 @@
 # Combine all AMRFinderPlus output files into one TSV
 # Usage: bash scripts/combine_amrfinder.sh <results_dir> <output_file>
 
-RESULTS_DIR=${1:-results}
+source config/params.sh
+
+RESULTS_DIR=${1:-${RESULTS_DIR}}
 OUTPUT_FILE=${2:-combined_amrfinder.tsv}
 
 first_file=$(find $RESULTS_DIR -name "*_amrfinder.tsv" | head -1)
