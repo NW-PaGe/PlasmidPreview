@@ -81,7 +81,7 @@ amrfinder --database_version
 
 As of this writing, the expected versions are:
 - **Software:** 4.2.7
-- **Database:** 2026-03-24.1
+- **Database:** 2026-05-15.1
 
 > **Note:** `amrfinder --update` must be run from `~` (not a subdirectory that may not persist),
 > and `TMPDIR` must point to a directory with sufficient space. On EC2 instances, `/tmp` is often
