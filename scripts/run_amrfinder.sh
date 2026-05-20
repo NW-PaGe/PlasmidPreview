@@ -8,7 +8,6 @@ for sample_dir in ${RESULTS_DIR}/*/; do
     sample=$(basename $sample_dir)
 
     # Build organism flag if ORGANISM is set in params.sh
-    ORGANISM_FLAG-""
     if [ -n "${ORGANISM}" ]; then
         ORGANISM_FLAG="--organism ${ORGANISM}"
         echo "USING ORGANISM: ${ORGANISM}"
