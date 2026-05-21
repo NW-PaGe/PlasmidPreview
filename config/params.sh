@@ -14,3 +14,8 @@ INPUT_PATH=~/plasmid-triage/assemblies
 # requires underscores, not spaces ie: Klebsiella_pneumoniae
 # run amrfinder --list_organisms to see supported orgs in db version
 ORGANISM=""
+
+# AWS priofle for S3 access to assemblies
+# leave empty to use default profile
+# set to a named profile ie "waphl" to use credentials for a difference account
+AWS_PROFILE_NAME=""
