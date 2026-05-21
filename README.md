@@ -98,7 +98,7 @@ By default the workflow uses whatever AWS credentials are active in your shell. 
 aws configure --profile waphl
 ```
 
-**Then in 'config/params.sh': **  
+**Then in 'config/params.sh':**  
 
 ```bash
 AWS_PROFILE_NAME="waphl"
