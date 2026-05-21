@@ -99,9 +99,11 @@ aws configure --profile waphl
 ```
 
 **Then in 'config/params.sh': **  
-'''bash
+
+```bash
 AWS_PROFILE_NAME="waphl"
-'''
+```
+
 Leave 'AWS_PROFILE_NAME=""' to use default credentials
 The profile is only used for syncing assemblies from S3.  
 
