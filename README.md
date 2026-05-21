@@ -87,6 +87,24 @@ As of this writing, the expected versions are:
 > and `TMPDIR` must point to a directory with sufficient space. On EC2 instances, `/tmp` is often
 > too small to build the BLAST index — redirecting to `~/tmp` resolves this.
 
+## Set-up
+
+Edit params.sh with paths or S3 buckets to where your assemblies are located and where you want the output data to go.
+
+#### Using a non-default AWS profile
+By default the workflow uses whatever AWS credentials are active in your shell. If you need to access assemblies in a S34 bucket in a different group (ie waphl ) do a one time set up and set the profile name in params.sh  
+
+```bash
+aws configure --profile waphl
+```
+
+**Then in 'config/params.sh': **  
+'''bash
+AWS_PROFILE_NAME="waphl"
+'''
+Leave 'AWS_PROFILE_NAME=""' to use default credentials
+The profile is only used for syncing assemblies from S3.  
+
 ## Usage
 
 Run scripts in this order from your working directory (plasmid-triage):  
