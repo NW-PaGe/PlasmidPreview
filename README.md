@@ -24,7 +24,7 @@ This workflow detects and characterizes plasmids in bacterial whole genome seque
 
 - **MOB-suite v3.1.9** — plasmid contig classification, reconstruction and typing
 - **AMRFinderPlus v4.0.3** — antimicrobial resistance gene detection
-- Database: NCBI Reference Gene Catalog 2024-10-22.1
+- Database: NCBI Reference Gene Catalog 
 
 ## Input
 
