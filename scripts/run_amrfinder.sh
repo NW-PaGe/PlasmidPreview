@@ -7,6 +7,12 @@ source config/params.sh
 for sample_dir in ${RESULTS_DIR}/*/; do
     sample=$(basename $sample_dir)
 
+    # Build organism flag if ORGANISM is set in params.sh
+    if [ -n "${ORGANISM}" ]; then
+        ORGANISM_FLAG="--organism ${ORGANISM}"
+        echo "USING ORGANISM: ${ORGANISM}"
+    fi
+        
     # Run on plasmid bins (plasmid_*.fasta)
     for fasta in ${sample_dir}plasmid_*.fasta; do
         [ -f "$fasta" ] || continue
@@ -17,6 +23,7 @@ for sample_dir in ${RESULTS_DIR}/*/; do
             --database ${AMR_DB} \
             --output ${RESULTS_DIR}/${sample}/${contig_name}_amrfinder.tsv \
             --threads ${THREADS} \
+            ${ORGANISM_FLAG} \
             --plus
     done
 
@@ -28,6 +35,7 @@ for sample_dir in ${RESULTS_DIR}/*/; do
             --database ${AMR_DB} \
             --output ${RESULTS_DIR}/${sample}/chromosome_amrfinder.tsv \
             --threads ${THREADS} \
+            ${ORGANISM_FLAG} \
             --plus
     fi
 

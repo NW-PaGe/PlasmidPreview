@@ -2,7 +2,9 @@
 # Combine all MOB-recon contig_report.txt files into one TSV
 # Usage: bash scripts/combine_contig_reports.sh <results_dir> <output_file>
 
-RESULTS_DIR=${1:-results}
+source config/params.sh
+
+RESULTS_DIR=${1:-${RESULTS_DIR}}
 OUTPUT_FILE=${2:-combined_contig_report.tsv}
 
 first_file=$(find $RESULTS_DIR -name "contig_report.txt" | head -1)

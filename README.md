@@ -24,7 +24,7 @@ This workflow detects and characterizes plasmids in bacterial whole genome seque
 
 - **MOB-suite v3.1.9** — plasmid contig classification, reconstruction and typing
 - **AMRFinderPlus v4.0.3** — antimicrobial resistance gene detection
-- Database: NCBI Reference Gene Catalog 2024-10-22.1
+- Database: NCBI Reference Gene Catalog 
 
 ## Input
 
@@ -32,7 +32,7 @@ Assembled contigs in FASTA format, one file per sample inside a folder named ass
 
 ## Params
 
-The scripts in this repo reference the paths listed in the file `config/params.sh`. Edit `config/params.sh` to point to your assemblies directory and results path:
+The scripts in this repo reference the paths listed in the file `config/params.sh`. Edit `config/params.sh` to point to your assemblies directory and results path (Note you may need to create directories for your assemblies and results (or use a S3 URI for assemblies):
 
 ```bash
 THREADS=8
@@ -43,19 +43,7 @@ INPUT_PATH=~/plasmid-triage/assemblies
 
 ## Installation
 
-Installation using conda
-```bash
-# Create conda environment
-conda create -n plasmid python=3.9 -y
-conda activate plasmid
 
-# Install tools
-pip install mob-suite
-conda install -c bioconda ncbi-amrfinderplus -y
-
-# Download AMRFinderPlus database
-amrfinder_update --database ./amrfinderplus_db
-```
 Installation using mamba
 ```
 conda create -n mamba-env -c conda-forge mamba -y
@@ -64,7 +52,12 @@ conda activate mamba-env
 mamba create -n plasmid -c conda-forge -c bioconda python=3.9 ncbi-amrfinderplus -y
 conda activate plasmid
 
+# MOB-suite is not available on conda and must be installed via pip. 
+#Dependencies must be installed separately via conda **before** running `mob_init`:
+
+conda install -c bioconda -c conda-forge mash blast muscle
 pip install mob-suite
+mob_init --database_directory ~/mobsuite_db
 
 # Download AMRFinderPlus database
 amrfinder_update --database ./amrfinderplus_db
@@ -88,15 +81,35 @@ amrfinder --database_version
 
 As of this writing, the expected versions are:
 - **Software:** 4.2.7
-- **Database:** 2026-03-24.1
+- **Database:** 2026-05-15.1
 
 > **Note:** `amrfinder --update` must be run from `~` (not a subdirectory that may not persist),
 > and `TMPDIR` must point to a directory with sufficient space. On EC2 instances, `/tmp` is often
 > too small to build the BLAST index — redirecting to `~/tmp` resolves this.
 
+## Set-up
+
+Edit params.sh with paths or S3 buckets to where your assemblies are located and where you want the output data to go.
+
+#### Using a non-default AWS profile
+By default the workflow uses whatever AWS credentials are active in your shell. If you need to access assemblies in a S34 bucket in a different group (ie waphl ) do a one time set up and set the profile name in params.sh  
+
+```bash
+aws configure --profile waphl
+```
+
+**Then in 'config/params.sh':**  
+
+```bash
+AWS_PROFILE_NAME="waphl"
+```
+
+Leave 'AWS_PROFILE_NAME=""' to use default credentials
+The profile is only used for syncing assemblies from S3.  
+
 ## Usage
 
-Run scripts in this order from your working directory:  
+Run scripts in this order from your working directory (plasmid-triage):  
 
 **note** this runs each sample sequentially and will take several minutes per sample for mob-recon
 **TODO** parallelize workflow and/or move to sequera or aws batch to make hundreds of samples take the time it takes to run one.  
@@ -113,8 +126,19 @@ bash scripts/combine_contig_reports.sh results/ combined_contig_report.tsv
 bash scripts/combine_amrfinder.sh results/ combined_amrfinder.tsv
 ```
 
-If the plasmid/chromosome for a given plasmid result is ambiguous, treat  the contig as a possible plasmid sequence for filtering-  this workflow is a screen, and we want to increase the chances of detecting plasmids at the expense of potentially having some false positives- we do not want to have false negative plasmid calls (ie miss samples that should really go to long-read sequencing for more definitive plasmid detection analysis)  
+If the plasmid/chromosome for a given plasmid result is ambiguous, treat  the contig as a possible plasmid sequence for filtering-  this workflow is a screen, and we want to increase the chances of detecting plasmids at the expense of potentially having some false positives- we do not want to have false negative plasmid calls (ie miss samples that should really go to long-read sequencing for more definitive plasmid detection analysis) 
 
+### Species-specific AMR detection (optional)
+AMRfinderPlus can apply species-specific point mutation information when you provide the species name for some species.  
+To evaluate if a species is supported run:  
+
+```bash
+amrfinder --list_organisms
+```
+either leave organism in params.sh blank, or insert species of interest per formatting above in --list_organisms ie Klebsiella_pneumoniae  
+**Note:** A single organism value is applied to all samples in the run, for mixed species runs, run separately. 
+
+ 
 ## How MOB-recon and AMRFinderPlus Results Are Combined
 
 MOB-recon and AMRFinderPlus answer different but complementary questions:
