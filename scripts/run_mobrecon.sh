@@ -17,8 +17,9 @@ if [[ "${INPUT_PATH}" == s3://* ]]; then
     echo "S3 path detected, syncing assemblies..."
     [ -n "${AWS_PROFILE_NAME}" ] && echo "Using AWS profile:" "${AWS_PROFILE_NAME}"
     mkdir -p ${LOCAL_ASSEMBLIES_DIR}
-    aws s3 sync ${PROFILE_FLAG} ${INPUT_PATH} ${ASSEMBLIES_DIR}/
     ASSEMBLIES_DIR=${LOCAL_ASSEMBLIES_DIR}
+    aws s3 sync ${PROFILE_FLAG} ${INPUT_PATH} ${ASSEMBLIES_DIR}/
+    
 else
     echo "Local path detected, using ${INPUT_PATH}..."
     ASSEMBLIES_DIR=${INPUT_PATH}
