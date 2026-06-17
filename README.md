@@ -232,4 +232,4 @@ Sauerborn et al. (2026) Resolving plasmid-encoded carbapenem resistance dynamics
 
 ## License
 
-
+MIT Licence
