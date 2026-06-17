@@ -1,6 +1,6 @@
 ---
 title: "Plasmid Triage Analysis"
-subtitle: "MOB-suite + AMRFinderPlus Combined Output"
+subtitle: "MOB-suite + AMRFinderPlus Combined Output summary and visualization"
 author: "Shawn Hawken"
 date: "`r Sys.Date()`"
 output:
@@ -21,13 +21,15 @@ knitr::opts_chunk$set(
 ## Overview
 
 This notebook combines MOB-recon contig classification with AMRFinderPlus resistance
-gene calls to triage short-read assemblies for long-read sequencing based on:
+gene calls to:
+  1. triage short-read assemblies for long-read sequencing based on:
 
 - Presence of potential plasmids carrying AMR genes
 - Presence of AMR genes on chromosome-designated contigs that may be misclassified plasmids
+  2. Generate or support hypotheses regarding presence of plasmid and AMR sequences in short-tread data  
 
-Note: this workflow is a screen. We prioritize sensitivity over specificity — ambiguous 
-calls are retained as potential plasmid detections to avoid false negatives.
+Note & Disclaimer: this workflow is a screening workflow. We prioritize sensitivity over specificity — ambiguous 
+calls are retained as potential plasmid detections to avoid false negatives. Plasmid presence/absence inferences should always be interpreted within the clinical and epidemiological context of the isolates in the investigation. For surveillance purposes only, not for diagnostic or treatment.
 
 ---
 
@@ -49,14 +51,14 @@ library(ggplot2)
 ```{r load-data} 
 
 contigs <- read.delim(
-  "../shigella_plasmid_triage_results/shigella_combined_contig_report.tsv",
+  "../your_combined_contig_report.tsv",
   sep              = "\t",
   header           = TRUE,
   stringsAsFactors = FALSE
 )
 
 amr <- read.delim(
-  "../shigella_plasmid_triage_results/shigella_combined_amrfinder.tsv",
+  "your_combined_amrfinder.tsv",
   sep              = "\t",
   header           = TRUE,
   stringsAsFactors = FALSE
@@ -74,8 +76,17 @@ cat("Plasmid contigs:     ", sum(contigs$molecule_type == "plasmid"), "\n")
 cat("Chromosome contigs:  ", sum(contigs$molecule_type == "chromosome"), "\n")
 cat("Samples:             ", length(unique(contigs$sample)), "\n")
 cat("Total AMR hits:      ", nrow(amr), "\n")
+cat("Unique AMR genes across samples:       ", length(unique(amr$Element.name)), "\n")
 
 ```
+
+--- 
+## Summary of AMR, Virulence and Stress genes across choromosome and plasmid designated sequence
+
+```{r}
+kable(table(amr$Element.symbol,amr$Type))
+```
+
 
 ---
 
@@ -152,15 +163,33 @@ chrom_amr_wide <- chrom_amr %>%
   ) %>%
   arrange(sample)
 
+# Add row sums and column sums
+gene_cols <- setdiff(colnames(chrom_amr_wide), "sample")
+
+chrom_amr_wide_display <- chrom_amr_wide %>%
+  mutate(row_total = rowSums(across(all_of(gene_cols))))
+
+col_totals <- chrom_amr_wide_display %>%
+  summarise(
+    sample    = "column_total",
+    across(all_of(gene_cols), sum),
+    row_total = sum(row_total)
+  )
+
+chrom_amr_wide_display <- bind_rows(chrom_amr_wide_display, col_totals)
+
 kable(
-  chrom_amr_wide,
-  caption   = "AMR gene counts on chromosome-designated contigs per sample",
+  chrom_amr_wide_display,
+  caption   = "AMR gene counts on chromosome-designated contigs per sample (with row and column totals)",
   row.names = FALSE
 ) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+  row_spec(nrow(chrom_amr_wide_display), bold = TRUE, background = "#f0f0f0") %>%
   scroll_box(height = "400px")
 
 ```
+
+
 
 ## Summary of plasmid AMR hits on both plasmid designated contigs OR chromosme designated contigs
 
@@ -168,14 +197,16 @@ kable(
 
 cat("Samples with plasmid AMR (linked on the same contigs):    ", length(unique(plasmid_bin_amr$sample)), "\n")
 cat("Samples with Chromosomal AMR (Examine samples for genes that could be on plasmids):      ", length(unique(chrom_amr$sample)), "\n")
+
 ```
 ---
 
 ## Literature-Based Flagging
 
- **Placeholder** — add gene symbols or classes of interest here for manual review 
+ **Placeholder COMING SOON** — add gene symbols or classes of interest here for manual review 
  prioritization. Examples: carbapenemases (blaNDM, blaKPC, blaOXA-48), ESBLs (blaCTX-M), 
  colistin (mcr).
+ 
 ```{r}
 
 
@@ -207,7 +238,9 @@ unique plasmid or chromosome AMR fingerprint. Column names are constructed as:
 `{molecule_type}_{primary_cluster_id}_{rep_type}_{amr_genes_sorted}`.
 Cell values are total coverage (in bp) of that bin in that sample.
 AMR genes are sorted alphabetically within each fingerprint so the same plasmid
-produces the same column name across different samples.
+produces the same column name across different samples.  
+*Note:* you will need to merge this so the first column of the dataframe matches up with ID names on your phylogenetic tree before viewing with auspice.  
+
 ```{r}
 
 # --- Plasmid columns ---
@@ -251,6 +284,11 @@ auspice_df <- all_samples %>%
 # Replace NAs with 0 for samples with no hits
 auspice_df[is.na(auspice_df)] <- 0
 
+```
+
+
+
+```{r}
 # Write out
 write.csv(auspice_df, "plasmid_triage_auspice_metadata.csv", row.names = FALSE)
 
@@ -260,7 +298,7 @@ cat("Total columns:          ", ncol(auspice_df), "\n")
 cat("Plasmid columns:        ", ncol(plasmid_auspice) - 1, "\n")
 cat("Chromosome AMR columns: ", ncol(chrom_auspice) - 1, "\n")
 ```
----
+
 
 ## Summarize samples with potential plasmids and AMR genes in common
 -summarize amr detection and potential plasmid detection across samples included in the input data  
@@ -269,6 +307,9 @@ cat("Chromosome AMR columns: ", ncol(chrom_auspice) - 1, "\n")
 
 ### Plasmid Fingerprint Summary
 ```{r plasmid-fingerprint-summary}
+
+plasmid_fingerprints
+
 # Build full fingerprint: primary_cluster_id + sorted amr_genes
 plasmid_fingerprints <- plasmid_bin_amr %>%
   mutate(
@@ -276,12 +317,20 @@ plasmid_fingerprints <- plasmid_bin_amr %>%
     fingerprint    = paste(primary_cluster_id, amr_genes, sep = "_")
   )
 
+
+# add wa id
+waids<-sapply(plasmid_fingerprints$sample,FUN=function(x){
+  IDs$ID[IDs$Sample==x]
+})
+plasmid_fingerprints$ID<-waids
+
+
 # Summary table: one row per fingerprint, count and list of samples
 plasmid_fingerprint_summary <- plasmid_fingerprints %>%
   group_by(fingerprint, primary_cluster_id, rep_type_clean, amr_genes, amr_classes) %>%
   summarise(
-    n_samples   = n_distinct(sample),
-    samples     = paste(sort(unique(sample)), collapse = "; "),
+    n_samples   = n_distinct(ID),
+    samples     = paste(sort(unique(ID)), collapse = "; "),
     .groups     = "drop"
   ) %>%
   arrange(desc(n_samples))
@@ -294,14 +343,20 @@ kable(
 ) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
   scroll_box(height = "400px")
+
+
+write.csv(plasmid_fingerprint_summary, "2026-05-21_plasmid_fingerprint_summary.csv", row.names = FALSE)
+
 ```
+
+
 
 ### Plasmid Fingerprint Presence/Absence Heatmap
 ```{r plasmid-heatmap}
 # Build presence/absence matrix
 plasmid_matrix <- plasmid_fingerprints %>%
   mutate(present = 1) %>%
-  select(sample, fingerprint, present) %>%
+  select(ID, fingerprint, present) %>%
   pivot_wider(
     names_from  = fingerprint,
     values_from = present,
@@ -311,10 +366,10 @@ plasmid_matrix <- plasmid_fingerprints %>%
 # Save as dataframe for exploration
 plasmid_matrix_df <- as.data.frame(plasmid_matrix)
 
-# Helper to cluster and plot plasmid heatmap
+# Helper to cluster and plot plasmid heatmap — fingerprints on y, samples on x
 plot_plasmid_heatmap <- function(mat_df, title) {
   mat_numeric <- as.matrix(mat_df[, -1])
-  rownames(mat_numeric) <- mat_df$sample
+  rownames(mat_numeric) <- mat_df$ID
 
   # Guard: need at least 2 rows and 2 columns to cluster
   if (nrow(mat_numeric) < 2 | ncol(mat_numeric) < 2) {
@@ -326,12 +381,12 @@ plot_plasmid_heatmap <- function(mat_df, title) {
   fp_order     <- colnames(mat_numeric)[hclust(dist(t(mat_numeric)))$order]
 
   mat_df %>%
-    pivot_longer(cols = -sample, names_to = "fingerprint", values_to = "present") %>%
+    pivot_longer(cols = -ID, names_to = "fingerprint", values_to = "present") %>%
     mutate(
-      sample      = factor(sample,      levels = sample_order),
+      sample      = factor(ID,      levels = sample_order),
       fingerprint = factor(fingerprint, levels = fp_order)
     ) %>%
-    ggplot(aes(x = fingerprint, y = sample, fill = factor(present))) +
+    ggplot(aes(x = ID, y = fingerprint, fill = factor(present))) +
     geom_tile(color = "white") +
     scale_fill_manual(
       values = c("0" = "#f0f0f0", "1" = "#2c7bb6"),
@@ -345,7 +400,7 @@ plot_plasmid_heatmap <- function(mat_df, title) {
       panel.grid      = element_blank(),
       legend.position = "top"
     ) +
-    labs(title = title, x = "Plasmid fingerprint (bin + AMR genes)", y = "Sample")
+    labs(title = title, x = "Sample", y = "Plasmid fingerprint (bin + AMR genes)")
 }
 
 # Version 1 — all fingerprints
@@ -360,12 +415,16 @@ multi_sample_fps <- names(which(colSums(plasmid_matrix_df[, -1]) > 1))
 if (length(multi_sample_fps) == 0) {
   message("No plasmid fingerprints shared across more than one sample.")
 } else {
-  plasmid_matrix_df_shared <- plasmid_matrix_df[, c("sample", multi_sample_fps)]
+  plasmid_matrix_df_shared <- plasmid_matrix_df[, c("ID", multi_sample_fps)]
   plot_plasmid_heatmap(
     plasmid_matrix_df_shared,
     "Plasmid fingerprint presence/absence — shared across >1 sample (clustered)"
   )
 }
+
+
+write.csv(plasmid_matrix_df, "plasmid_matrix_summary.csv", row.names = FALSE)
+
 ```
 
 ## Chromosome AMR genes presence/absence heatmaps
@@ -439,4 +498,6 @@ if (length(multi_sample_genes) == 0) {
     "Chromosome AMR gene counts — shared across >1 sample (clustered)"
   )
 }
+
 ```
+## Coming soon: plasmid content visualization.  
