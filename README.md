@@ -213,8 +213,9 @@ Read in the combined outputs and join on contig ID to link AMR hits to plasmid m
 
 ## Contributing
 
-This workflow was conceptulaized and written by Shawn Hawken PhD, MPH at the Washington State Department of Health Molecular Epidemiology Program, Bacterial & Mycotic Unit.
-Alpha/Beta testing by Marcela Torres and Dahlia Walters, Washington State Department of Health Molecular Epidemiology Program, Bacterial & Mycotic Unit
+This workflow was conceptulaized and written by Shawn Hawken PhD, MPH at the Washington State Department of Health Molecular Epidemiology Program, Bacterial & Mycotic Unit.  
+  
+Alpha/Beta testing by Marcela Torres and Dahlia Walters, Washington State Department of Health Molecular Epidemiology Program, Bacterial & Mycotic Unit  
 
 ## Citations
 
