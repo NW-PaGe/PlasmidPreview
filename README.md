@@ -2,7 +2,7 @@
 
 This is a filtering/hypothesis-generating workflow for plasmid detection and characterization.  Outputs can be used to identify which isolates are worth committing long-read sequencing resources to for higher-resolution plasmid and MGE characterization.
 
-PlasmidPreview previews plasmid and resistance gene and mutation content from short-read data before long-read sequencing. By combining MOB-recon and AMRFinderPlus across an isolate dataset, it can surface candidates where plasmid context is ambiguous or where mobile resistance elements could warrant additional resolution. This workflow can be used to let labs and surveillance programs direct resources for long-read sequencing capacity to isolates that are most likley to contain plasmids and mobile resistance. This workflow was developed at the Washington State Department of Health for genomic surveillance workflows. 
+PlasmidPreview previews plasmid and resistance gene and mutation content from short-read data before long-read sequencing. By combining MOB-recon and AMRFinderPlus across an isolate dataset, it can surface candidates where plasmid context is ambiguous or where mobile resistance elements could warrant additional resolution. Plasmid and AMR detections are summarized and visualized with an R notebook which also generates files that can be used to visualize plasmid and AMR sequence presence across phylogenetic relationships. This workflow can be used to assist labs and surveillance programs to direct resources for long-read sequencing capacity to isolates that are most likley to contain plasmids and mobile resistance. This workflow was developed at the Washington State Department of Health for genomic surveillance workflows.  
 
 ## Background
 
@@ -163,7 +163,7 @@ Joining on plasmid bins lets you filter (triage) short read shotgun genome seque
 
 ## R Analysis to Combine MOB-suite + AMRFinderPlus Data
 
-Read in the combined outputs and join on contig ID to link AMR hits to plasmid metadata using the Rmd notebook in the notebooks section.  
+Read in the combined outputs into R notebook and join on contig ID to link AMR hits to plasmid metadata using the Rmd notebook in the notebooks section.  This notebook creates summary tables, visualizations and exported files that can be used to visualize plasmid and AMR detections across WGS-based phylotenetic relationships.     
 
 
 ## Output Files
