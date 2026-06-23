@@ -213,11 +213,12 @@ Read in the combined outputs and join on contig ID to link AMR hits to plasmid m
 
 ## Contributing
 
-
+This workflow was conceptulaized and written by Shawn Hawken PhD, MPH at the Washington State Department of Health Molecular Epidemiology Program, Bacterial & Mycotic Unit.
+Alpha/Beta testing by Marcela Torres and Dahlia Walters, Washington State Department of Health Molecular Epidemiology Program, Bacterial & Mycotic Unit
 
 ## Citations
 
-If you use this workflow please cite the following tools:
+If you use this workflow please also cite the following tools:
 
 **MOB-suite**
 Robertson J, Nash JHE. (2018) MOB-suite: software tools for clustering, reconstruction and typing of plasmids from draft assemblies. *Microbial Genomics* 4(8). doi: 10.1099/mgen.0.000206
