@@ -1,8 +1,8 @@
-# plasmid-triage
+# PlasmidPreview
 
-This is a filtering/hypothesis-generating workflow for plasmid detection and characterization. It uses MOB-recon and AMRFinderPlus on short-read WGS assemblies. 
+This is a filtering/hypothesis-generating workflow for plasmid detection and characterization.  Outputs can be used to identify which isolates are worth committing long-read sequencing resources to for higher-resolution plasmid and MGE characterization.
 
-This workflow can be used to triage short-read contig-level assemblies for long-read sequencing, which can then determine plasmid content of bacterial isolate sequences.
+PlasmidPreview previews plasmid and resistance gene and mutation content from short-read data before long-read sequencing. By combining MOB-recon and AMRFinderPlus across an isolate dataset, it can surface candidates where plasmid context is ambiguous or where mobile resistance elements could warrant additional resolution. This workflow can be used to let labs and surveillance programs direct resources for long-read sequencing capacity to isolates that are most likley to contain plasmids and mobile resistance. This workflow was developed at the Washington State Department of Health for genomic surveillance workflows. 
 
 ## Background
 
