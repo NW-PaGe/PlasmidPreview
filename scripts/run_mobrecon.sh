@@ -26,7 +26,7 @@ else
 fi
 
 for fasta in ${ASSEMBLIES_DIR}/*.fna ${ASSEMBLIES_DIR}/*.fasta ${ASSEMBLIES_DIR}/*.fa; do
-    [-e "$fasta" ] || continue
+    [-e "$fasta"] || continue
     sample=$(basename "$fasta")
     sample="${sample%.fna}"
     sample="${sample%.fasta}"
