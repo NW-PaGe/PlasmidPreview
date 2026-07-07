@@ -318,11 +318,7 @@ plasmid_fingerprints <- plasmid_bin_amr %>%
   )
 
 
-# add wa id
-waids<-sapply(plasmid_fingerprints$sample,FUN=function(x){
-  IDs$ID[IDs$Sample==x]
-})
-plasmid_fingerprints$ID<-waids
+plasmid_fingerprints$ID<-plasmid_fingerprints$sample
 
 
 # Summary table: one row per fingerprint, count and list of samples
@@ -500,4 +496,46 @@ if (length(multi_sample_genes) == 0) {
 }
 
 ```
-## Coming soon: plasmid content visualization.  
+
+
+## Plot heatmaps by phylogenetic trees if tree present 
+-This is used to evaluate tree side by side with the matrix plot to examine phylogenetic distribution of detected genes and plasmids  
+
+```{r}
+# read in tree
+gubbins.tree<-read.tree("tree.nwk")
+#clean up tree tip names if needed to match the matrix you wish to plot
+#gubbins.tree$tip.label<-sub("_T1","",gubbins.tree$tip.label) #cleanup tip labels to match matrix rownames
+
+
+# trim tree to only include tips that are in the distance matrix you wish to analyze
+tips<-setdiff(gubbins.tree$tip.label,rownames(chrom_matrix_df))
+
+trimmed_tree <- drop.tip(gubbins.tree, tips, trim.internal = TRUE)
+
+plotTree(trimmed_tree) # this is the tree used to order the heatmap
+
+
+# plot the resulting presence-absence matrix heatmap
+# note the tip.labels and row names on the matrix must be the same!
+#order matrix by the tree tips
+
+ordered_mat<-chrom_matrix_df[rev(trimmed_tree$tip.label),]
+
+# remove genes that are not present in any of the tree members
+ordered_mat<-ordered_mat[,colSums(ordered_mat)>0]
+
+#plot ordered matrix
+pheatmap(ordered_mat,
+         legend_breaks = c(0,1), 
+         legend_labels = c("Absent","Present"),
+         annotation_names_row = TRUE,
+         annotation_names_col = TRUE,
+         cluster_rows = FALSE,
+         cluster_cols=TRUE,
+         color = (c("lightblue","red")),
+          )
+
+#evaluate tree side by side with the matrix plot to examine phylogenetic distribution of detected genes and plasmids
+```
+
